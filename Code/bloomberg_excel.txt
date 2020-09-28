@@ -1,0 +1,11 @@
+https://stackoverflow.com/questions/57071207/getting-historical-options-data-using-bloomberg-into-excel
+
+Use Code:
+
+=BDH("SPY 12/20/19 C300 Equity", "PX_LAST", 20170811, 20170814)
+
+---> SPY is the ticker C/P determines whether call/put 300 is the strike equity shows that it is a stock 
+
+---> "PX_LAST" enables historical data (last pricing data)
+
+---> from yyyymmdd to yyyymmdd
