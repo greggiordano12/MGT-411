@@ -9,3 +9,12 @@ Use Code:
 ---> "PX_LAST" enables historical data (last pricing data)
 
 ---> from yyyymmdd to yyyymmdd
+
+
+-------------------------------------------------------------------------------------------------------------
+Interfacing Excel with my local files
+
+In Excel, go to open file, then go to Local Disk in directory then Users and select your user.
+You will have access to all of your local files. Ideally, you will have an excel file already
+created from Python and then when you open the file in the Bloomberg excel it will run the functions
+and after it is finished, just do "save as csv" to your onedrive directory. Now you are done
