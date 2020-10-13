@@ -2,9 +2,22 @@ import pandas as pd
 import pandas_datareader.data as pdr
 from datetime import date, timedelta
 import calendar
+from api_key import av_api_key
 
 spy = pdr.DataReader("SPY","yahoo","2015-01-01")
 spy.head()
+
+def daily_close(tickers, start, end=None):
+    """
+    Returns a dataframe of daily unadjusted close prices for a list of tickers. Index of df is the date and columns are the tickers.
+    """
+    df = pd.DataFrame()
+
+    for ticker in tickers:
+        data = pdr.DataReader(ticker, "av-daily", start=start, end=end, api_key=av_api_key)
+        df[ticker] = data["close"]
+
+    return df
 
 
 def next_third_friday(d):
