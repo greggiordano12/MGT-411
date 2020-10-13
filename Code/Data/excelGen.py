@@ -148,7 +148,7 @@ class excelOption:
                 for tick in self.tickers:
                     temp_strike = atm_prices[tick]
                     bloom_str = bloombergExcel(tick, temp_strike,temp_3m_exp,date,temp_3m_exp,C_P)
-                    col_name = bloom_str[-51:-37]
+                    col_name = bloom_str[6: s.find("Equity")-1]
                     data_dic[tick][col_name] = [bloom_str]
                     df_index = data_dic[tick].columns.get_loc(col_name)
                     data_dic[tick].insert(df_index+1,"","",True)
@@ -161,11 +161,6 @@ class excelOption:
         writer.save()
 
         return data_dic
-
-
-
-s = 'hello "greg" how are you'
-
 
 
 
