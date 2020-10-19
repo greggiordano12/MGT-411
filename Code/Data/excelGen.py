@@ -3,8 +3,7 @@ import pandas_datareader.data as pdr
 from datetime import date, timedelta
 import calendar
 
-spy = pdr.DataReader("SPY","yahoo","2015-01-01")
-spy.head()
+
 
 
 def next_third_friday(d):
@@ -31,50 +30,46 @@ def third_fridays(d, n):
 
     return result
 d = pd.to_datetime("2020-10-05")
-third_fridays(d,3)[-1]
+third_fridays(d,3)
 
 
-def returns_matrix(tickers, start_date, end_date):
-    #NEED TO CHANGE FOR FACT THAT TICKERS HAVE VERY DIFFERENT DATA THAT THEY GO BACK TO#
-    '''
-    Creates a daily returns dataframe where each column is a different stock
-    '''
-    min_week = pd.to_datetime("1900-01-01") #sets initial week as today
-    rmat = []
-    data_dic = {}
-    count = 0
-    for tick in tickers:
-        temp_df = pdr.DataReader(tick, "yahoo", start_date, end_date)
-        temp_dates = temp_df.index
-        data_dic[count] = temp_df
+# def returns_matrix(tickers, start_date, end_date):
+#     #NEED TO CHANGE FOR FACT THAT TICKERS HAVE VERY DIFFERENT DATA THAT THEY GO BACK TO#
+#     '''
+#     Creates a daily returns dataframe where each column is a different stock
+#     '''
+#     min_week = pd.to_datetime("1900-01-01") #sets initial week as today
+#     rmat = []
+#     data_dic = {}
+#     count = 0
+#     for tick in tickers:
+#         temp_df = pdr.DataReader(tick, "yahoo", start_date, end_date)
+#         temp_dates = temp_df.index
+#         data_dic[count] = temp_df
+#
+#         if temp_dates[0] > min_week:
+#             min_week = temp_dates[0]
+#         count +=1
+#     for i in range(len(tickers)):
+#         temp_df = data_dic[i]
+#         temp_dates = temp_df.index
+#         if temp_dates[0] != min_week:
+#             drop_index = list(temp_dates).index(min_week)
+#             temp_df = temp_df.drop(temp_dates[:drop_index])
+#         temp_returns = np.log(temp_df.Close) - np.log(temp_df.Close.shift(1))
+#         temp_returns = list(temp_returns[1:])
+#         rmat = rmat + [temp_returns]
+#     rmat = np.array(rmat)
+#     dates = temp_df.index
+#     rdf=pd.DataFrame({tickers[i]:rmat[i] for i in range(len(tickers))})
+#     rdf.index = dates[1:]
+#     return rdf
 
-        if temp_dates[0] > min_week:
-            min_week = temp_dates[0]
-        count +=1
-    for i in range(len(tickers)):
-        temp_df = data_dic[i]
-        temp_dates = temp_df.index
-        if temp_dates[0] != min_week:
-            drop_index = list(temp_dates).index(min_week)
-            temp_df = temp_df.drop(temp_dates[:drop_index])
-        temp_returns = np.log(temp_df.Close) - np.log(temp_df.Close.shift(1))
-        temp_returns = list(temp_returns[1:])
-        rmat = rmat + [temp_returns]
-    rmat = np.array(rmat)
-    dates = temp_df.index
-    rdf=pd.DataFrame({tickers[i]:rmat[i] for i in range(len(tickers))})
-    rdf.index = dates[1:]
-    return rdf
 
-writer = pd.ExcelWriter("HW1_Data.xlsx")
-stock_data.to_excel(writer,sheet_name=tick+"_spot")
-calls_df.to_excel(writer, sheet_name= tick + "_calls")
-puts_df.to_excel(writer, sheet_name = tick+"_puts")
-writer.save()
 
 def bloombergExcel(ticker, strike, exp_date, start_date, end_date, C_P):
     strike = str(strike)[:-2]
-    exp_date = str(exp_date.month) +"/" + str(exp_date.day) + "/" + str(exp_date.year)[:-2]
+    exp_date = str(exp_date.month) +"/" + str(exp_date.day) + "/" + str(exp_date.year)[-2:]
     m,d = str(start_date.month), str(start_date.day)
     if len(str(start_date.month)) < 2 or len(str(start_date.day))<2:
         if len(str(start_date.month)) < 2:
@@ -96,14 +91,7 @@ def bloombergExcel(ticker, strike, exp_date, start_date, end_date, C_P):
 
 s=bloombergExcel("SPY",300.0,pd.to_datetime("2020-10-16"),pd.to_datetime("2020-07-16"),pd.to_datetime("2020-10-16"),"C")
 s
-s[-51:-37]
-s = "hello"
-a = "Hi"
-''+" s "+a
 
-var_a = 10
-
-f"""This is my quoted variable: "{var_a}". "{s}" """
 class excelOption:
 
     def __init__(self, tickers, start_date, end_date=None):
@@ -113,29 +101,37 @@ class excelOption:
         self.price_matrix = pdr.DataReader(tickers, "yahoo",start_date,end_date)["Close"].dropna()
 
 
-    def generateData(self,strike_pct,delta_pct = 0,C_P = "C"):
+    def generateData(self,strike_pct=0,delta_pct = 0,C_P = "C"):
         '''
         Every 3-month ATM option. This works
         '''
+        # Create excel file for bloomberg to download data
         writer = pd.ExcelWriter("Option_Data.xlsx")
+        # All the dates that the tickers were traded
         dates = self.price_matrix.index
         last_month = 0
+        # Dictionary where all data will be stored (dictionary of dataframes for each ticker)
         data_dic = {tick:pd.DataFrame({}) for tick in self.tickers}
-        for date in dates:
 
+        # loop through each date to find the start of a new month to find the next
+        # 3m atm option
+        for date in dates:
+            # when we hit a new month, find the third friday in 3months (where option expiries happen)
             if last_month != date.month:
-                temp_3m_exp = third_fridays(date,3)[-1]
+                temp_3m_exp = third_fridays(date,3)[-1] # finds the next 3m atm option
                 if temp_3m_exp > pd.to_datetime("today"):
                     break
+                # if the third friday wasn't traded on then go to the thursday
                 if temp_3m_exp not in dates:
                     temp_3m_exp = temp_3m_exp - timedelta(days=1)
-
+                # finds what the atm strikes were 3m before
                 atm_prices = self.price_matrix.loc[date]//1
 
                 for tick in self.tickers:
                     temp_strike = atm_prices[tick]
+                    # creates the bloomberg function for the given ticker and dates
                     bloom_str = bloombergExcel(tick, temp_strike,temp_3m_exp,date,temp_3m_exp,C_P)
-                    col_name = bloom_str[-51:-37]
+                    col_name = bloom_str[6:-37] # look more into on column
                     data_dic[tick][col_name] = [bloom_str]
                     df_index = data_dic[tick].columns.get_loc(col_name)
                     data_dic[tick].insert(df_index+1,"","",True)
@@ -151,32 +147,11 @@ class excelOption:
 
 
 
-s = 'hello "greg" how are you'
 
 
 
 
-data = excelOption(["SPY","XLK","AAPL"],"2020-01-01")
-d=data.generateData(0)
+
+data = excelOption(["SPY","XLK","MSFT"],"2015-01-01")
+d=data.generateData()
 d["SPY"]
-
-
-
-df.to_excel(writer)
-writer.save()
-
-import os
-print(os.getcwd())
-str(x[0])[:-2]
-dic = {}
-lst = ["hello","bye","g"]
-dic = {t:{} for t in lst}
-dic["hello"]["h"] = [1,2,3]
-dic["hello"]["h"]
-df = pd.DataFrame({"a":[1,2,3],"b":[1,2,3],"c":[3,4,5]})
-df.insert(2,"newcol","",allow_duplicates=True)
-df.insert(1,"","",True)
-df["aa"] = [1,2,3]
-df = pd.DataFrame({})
-df["a"] = [1,2,3]
-df

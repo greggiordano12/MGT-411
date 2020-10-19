@@ -2,8 +2,9 @@ https://stackoverflow.com/questions/57071207/getting-historical-options-data-usi
 
 Use Code:
 
+=BDH("SPY 12/20/19 C310 Equity", "PX_LAST", 20170811, 20170814)
 =BDH("SPY 12/20/19 C300 Equity", "PX_LAST", 20170811, 20170814)
-
+=BDH("SPY 10/16/20 C310 Equity", "PX_LAST", 20200511, 20200811)
 ---> SPY is the ticker C/P determines whether call/put 300 is the strike equity shows that it is a stock 
 
 ---> "PX_LAST" enables historical data (last pricing data)
