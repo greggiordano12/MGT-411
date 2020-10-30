@@ -29,45 +29,15 @@ def third_fridays(d, n):
         result.append(next_third_friday(result[-1]))
 
     return result
-d = pd.to_datetime("2020-10-05")
-third_fridays(d,3)
 
-
-# def returns_matrix(tickers, start_date, end_date):
-#     #NEED TO CHANGE FOR FACT THAT TICKERS HAVE VERY DIFFERENT DATA THAT THEY GO BACK TO#
-#     '''
-#     Creates a daily returns dataframe where each column is a different stock
-#     '''
-#     min_week = pd.to_datetime("1900-01-01") #sets initial week as today
-#     rmat = []
-#     data_dic = {}
-#     count = 0
-#     for tick in tickers:
-#         temp_df = pdr.DataReader(tick, "yahoo", start_date, end_date)
-#         temp_dates = temp_df.index
-#         data_dic[count] = temp_df
-#
-#         if temp_dates[0] > min_week:
-#             min_week = temp_dates[0]
-#         count +=1
-#     for i in range(len(tickers)):
-#         temp_df = data_dic[i]
-#         temp_dates = temp_df.index
-#         if temp_dates[0] != min_week:
-#             drop_index = list(temp_dates).index(min_week)
-#             temp_df = temp_df.drop(temp_dates[:drop_index])
-#         temp_returns = np.log(temp_df.Close) - np.log(temp_df.Close.shift(1))
-#         temp_returns = list(temp_returns[1:])
-#         rmat = rmat + [temp_returns]
-#     rmat = np.array(rmat)
-#     dates = temp_df.index
-#     rdf=pd.DataFrame({tickers[i]:rmat[i] for i in range(len(tickers))})
-#     rdf.index = dates[1:]
-#     return rdf
-
-
+# d = pd.to_datetime("2020-10-05")
+# third_fridays(d,3)
 
 def bloombergExcel(ticker, strike, exp_date, start_date, end_date, C_P):
+    '''
+    Use inputs to create the bloomberg function BDH string for Bloomberg Excel option data
+    C_P = "C" or "P" to flag call or put
+    '''
     strike = str(strike)[:-2]
     exp_date = str(exp_date.month) +"/" + str(exp_date.day) + "/" + str(exp_date.year)[-2:]
     m,d = str(start_date.month), str(start_date.day)
@@ -89,8 +59,8 @@ def bloombergExcel(ticker, strike, exp_date, start_date, end_date, C_P):
     s = f"""=BDH("{ticker} {exp_date} {C_P}{strike} Equity","PX_LAST",{start_date},{end_date})"""
     return s
 
-s=bloombergExcel("SPY",300.0,pd.to_datetime("2020-10-16"),pd.to_datetime("2020-07-16"),pd.to_datetime("2020-10-16"),"C")
-s
+# s=bloombergExcel("SPY",300.0,pd.to_datetime("2020-10-16"),pd.to_datetime("2020-07-16"),pd.to_datetime("2020-10-16"),"C")
+# s
 
 class excelOption:
 
@@ -111,7 +81,8 @@ class excelOption:
         dates = self.price_matrix.index
         last_month = 0
         # Dictionary where all data will be stored (dictionary of dataframes for each ticker)
-        data_dic = {tick:pd.DataFrame({}) for tick in self.tickers}
+        data_dic, data_dic1 = {tick+" Calls":pd.DataFrame({}) for tick in self.tickers},{tick+" Puts":pd.DataFrame({}) for tick in self.tickers}
+        data_dic.update(data_dic1)
 
         # loop through each date to find the start of a new month to find the next
         # 3m atm option
@@ -128,18 +99,25 @@ class excelOption:
                 atm_prices = self.price_matrix.loc[date]//1
 
                 for tick in self.tickers:
+                    call_str, put_str = tick+" Calls",tick+" Puts"
                     temp_strike = atm_prices[tick]
                     # creates the bloomberg function for the given ticker and dates
-                    bloom_str = bloombergExcel(tick, temp_strike,temp_3m_exp,date,temp_3m_exp,C_P)
-                    col_name = bloom_str[6:-37] # look more into on column
-                    data_dic[tick][col_name] = [bloom_str]
-                    df_index = data_dic[tick].columns.get_loc(col_name)
-                    data_dic[tick].insert(df_index+1,"","",True)
+                    bloom_str_call = bloombergExcel(tick, temp_strike,temp_3m_exp,date,temp_3m_exp,"C")
+                    bloom_str_put = bloombergExcel(tick, temp_strike,temp_3m_exp,date,temp_3m_exp,"P")
+
+                    col_name_call,col_name_put = bloom_str_call[6:-37],bloom_str_put[6:-37]
+                    data_dic[call_str][col_name_call],data_dic[put_str][col_name_put] = [bloom_str_call], [bloom_str_put]
+                    df_index_call, df_index_put = data_dic[call_str].columns.get_loc(col_name_call),data_dic[put_str].columns.get_loc(col_name_put)
+                    data_dic[call_str].insert(df_index_call+1,"","",True)
+                    data_dic[put_str].insert(df_index_put+1,"","",True)
 
             last_month = date.month
 
         for tick in self.tickers:
-            data_dic[tick].to_excel(writer,sheet_name=tick+"_"+C_P)
+            call_str, put_str = tick+" Calls",tick+" Puts"
+            data_dic[call_str].to_excel(writer,sheet_name=call_str)
+            data_dic[put_str].to_excel(writer,sheet_name=put_str)
+
 
         writer.save()
 
@@ -152,6 +130,11 @@ class excelOption:
 
 
 
-data = excelOption(["SPY","XLK","MSFT"],"2015-01-01")
+data = excelOption(["SPY","XLK","XLF","XLY","XLV","XLI"],"2015-01-01")
 d=data.generateData()
-d["SPY"]
+# d["SPY Puts"]
+
+
+import os
+os.getcwd()
+dir ="C:/Users/home/OneDrive/Senior Year/MGT-411/Code/Data/Option_Data.xlsx"
