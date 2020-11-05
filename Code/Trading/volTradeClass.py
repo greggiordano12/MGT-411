@@ -279,12 +279,11 @@ class volTrade:
             for tick in self.tickers:
                 tick_calls, tick_puts = data[tick]["Calls"]["Prices"][exp].iloc[:,0].drop_duplicates(keep="last"),data[tick]["Puts"]["Prices"][exp].iloc[:,0].drop_duplicates(keep='last')
                 tick_call_ivs, tick_put_ivs = data[tick]["Calls"]["Prices"][exp].iloc[:,1].drop_duplicates(keep='last'),data[tick]["Puts"]["Prices"][exp].iloc[:,1].drop_duplicates(keep='last')
-
                 curr_options,curr_ivs = pd.concat([tick_calls,tick_puts],axis =1), pd.concat([tick_call_ivs,tick_put_ivs],axis =1)
                 temp_option_matrix, temp_iv_matrix = pd.concat([temp_option_matrix,curr_options],axis=1), pd.concat([temp_iv_matrix,curr_ivs],axis=1)
 
             temp_iv_matrix.columns = temp_option_matrix.columns
-            data_prices[exp], data_ivs[exp] = temp_option_matrix.dropna(), temp_iv_matrix.dropna()
+            data_prices[exp], data_ivs[exp] = temp_option_matrix.interpolate().dropna(), temp_iv_matrix.interpolate().dropna()
 
         return data_prices, data_ivs
 
@@ -293,10 +292,11 @@ class volTrade:
 
 
     def dispersionTest(self, data = None):
-        ''' Create simple dispersion backtest'''
-        #### Create another function that matches data from optionSeries based on expiration date and create
-        #### dataframes for every expiration that includes all the tickers (Makes it much easier to track PnL etc.)
-        ## dataframe for every expiration should be a double column name so first column name is ticker second is strike
+        ''' Create simple dispersion backtest.
+        Weight trade based on sector weighting file. Short SPY straddle and long sector straddles at the beginning of each month
+
+        '''
+
 
         if data == None:
             data = self.optionSeries()
@@ -315,30 +315,21 @@ try_vols = volTrade(tickers,start_date)
 #data = try_vols.atm_dispersion()
 
 data1 = try_vols.optionSeries()
+
 option_prices, option_ivs=try_vols.all_expTS(data=data1)
-exps = list(option_timeseries[0].keys())
 
 
-data1["SPY"]["Calls"]["Strikes"]
+option_prices
 
+option_prices['2020-07-17'].plot()
 
-temp=data1["SPY"]["Calls"]["Prices"]['2020-09-18'].iloc[:,0]
-temp1 = data1["XLK"]["Calls"]["Prices"]['2020-09-18'].iloc[:,0]
-pd.concat([temp,temp1], axis=1)
+option_ivs["2017-04-21"]
+exps = list(option_prices.keys())
+exps.sort()
+writer = pd.ExcelWriter("Option_Price_Matrix.xlsx")
+for exp in exps:
+    option_prices[exp].to_excel(writer,sheet_name=exp)
 
+writer.save()
 
-data1["SPY"]["Calls"]["Prices"]
-
-temp1 = data1["XLI"]["Calls"]["Prices"]["2019-08-16"].iloc[:,0]
-temp = data1["SPY"]["Calls"]["Prices"]["2019-08-16"].iloc[:,0]
-pd.concat([temp1,temp],axis = 1).dropna()
-temp.loc[pd.to_datetime("2019-08-16")] = 7
-temp.drop_duplicates(keep=False)
-
-d = pd.to_datetime("2020-01-01")
-df = pd.DataFrame({})
-g=pd.concat([df,temp],axis=1)
-h = pd.concat([g,temp1],axis=1)
-h.loc[pd.to_datetime("2019-08-17")]
-
-h.drop_duplicates(keep="last")
+data1["XLF"]["Calls"]
