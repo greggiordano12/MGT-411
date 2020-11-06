@@ -24,8 +24,12 @@ def black_scholes(S, K, T, r, sigma, option_type="call"):
     call = (S * si.norm.cdf(d1, 0.0, 1.0) - K * np.exp(-r * T) * si.norm.cdf(d2, 0.0, 1.0))
     put = (K * np.exp(-r * T) * si.norm.cdf(-d2, 0.0, 1.0) - S * si.norm.cdf(-d1, 0.0, 1.0))
     if option_type == "call":
+        if call < .01:
+            call = .01
         return call
     else:
+        if put < .01:
+            put = .01
         return put
 
 
@@ -127,7 +131,7 @@ class volTrade:
         data[ticker]["Calls" or "Puts"]["Prices" or "Strikes"]["expiration-date-as-string"]
 
         Shown above will store a continuous time series of every option. Any dates that were missing in the Excel
-        File were interpolated by using Black-Scholes
+        File were interpolated by using Black-Scholes ---> make minimum black-Scholes price 1 cent
 
         Along with option prices, another column of Implied Vols is shown for each as well
 
@@ -300,23 +304,6 @@ class volTrade:
 
         return data_prices, data_ivs
 
-    def cum_returns_options(self, df):
-        cum_returns = df.copy()
-        cum_returns = cum_returns.drop(cum_returns.index[0])
-        daily_returns = cum_returns.copy()
-        start = df.index[0]
-        for row in cum_returns.index:
-            temp_r = (df.loc[row]-df.loc[start])/df.loc[start]
-            cum_returns.loc[row] = temp_r
-            if row == cum_returns.index[0]:
-                daily_returns.loc[row] = temp_r
-            else:
-                daily_returns.loc[row] = cum_returns.loc[row] - cum_returns.loc[prev_row]
-
-            prev_row = row
-
-        return daily_returns
-
     def dispersionTest(self, data = None):
         ''' Create simple dispersion backtest.
         Weight trade based on sector weighting file. Short SPY straddle and long sector straddles at the beginning of each month
@@ -327,7 +314,8 @@ class volTrade:
 
         exps = list(data.keys())
         exps.sort()
-        return_series = {}
+        return_series = {"Returns":{},"Series":{}}
+        all_returns =[]
         for exp in exps:
             curr_time_series = data[exp]
             s_weights = self.sector_weights_df.loc[curr_time_series.index[0]]
@@ -338,9 +326,14 @@ class volTrade:
             s_weights = np.array(temp_weights)
 
             daily_returns = curr_time_series.pct_change(1).dropna()
-            weighted_returns = daily_returns.dot(s_weights)
+            cum_returns = (daily_returns+1).cumprod() - 1
+            weighted_cum = cum_returns.dot(s_weights)
 
-            return_series[exp] = weighted_returns
+
+            return_series["Returns"][exp] = weighted_cum[-1]
+            daily_returns = (weighted_cum+1).pct_change(1).dropna()
+            return_series["Series"][exp] = daily_returns
+
 
 
         return return_series
@@ -357,135 +350,18 @@ data1 = try_vols.optionSeries()
 
 option_prices, option_ivs=try_vols.all_expTS(data=data1)
 
-
-#Hey John
-temp_ts = option_prices["2015-05-15"]
-weights = try_vols.sector_weights_df
-s_weights = weights.loc[temp_ts.index[0]]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-temp_weights = []
-for i in range(len(s_weights)):
-    temp_weights.append(s_weights[i]/2)
-    temp_weights.append(s_weights[i]/2)
-
-temp_weights.insert(0,-.5)
-temp_weights.insert(1,-.5)
-s_weights = np.array(temp_weights)
-
-s_weights
-
-s_weights.sum()
-
-
-
-
-
-
-
-
-
-
 all_portfolios = try_vols.dispersionTest(option_prices)
-all_portfolios
-exps = list(all_portfolios.keys())
-exps.sort()
-all_returns = []
-for exp in exps:
-    temp_ts_cumprod = (all_portfolios[exp]+1).cumprod() - 1
-    temp_total_return = temp_ts_cumprod.loc[temp_ts_cumprod.index[-1]]
-    print(temp_total_return)
-    all_returns.append(temp_total_return)
-
-df = pd.DataFrame({"Date":pd.to_datetime(exps),"Return":all_returns})
-df=df.set_index("Date")
+all_returns = list(all_portfolios["Returns"].values())
+np.mean(all_returns)
+np.std(all_returns)
 
 
 
 
 
 
-pd.to_datetime(exps)
-
-weights = try_vols.sector_weights_df
-
-weights.div(weights.sum(axis=1),axis=0)
-exps = list(option_prices.keys())
-exps.sort()
-
-temp_ts = option_prices[exps[5]]
-s_weights = weights.loc[temp_ts.index[0]]
-s_weights[0]
-temp_weights = []
-for i in range(len(s_weights)):
-    temp_weights.append(s_weights[i]/2)
-    temp_weights.append(s_weights[i]/2)
-
-temp_weights.insert(0,-.5)
-temp_weights.insert(1,-.5)
-s_weights = np.array(temp_weights)
-s_weights
-temp_returns = temp_ts.pct_change(1)
-
-temp_returns.dot(s_weights)
-(temp_returns.dropna()+1).cumprod()
-temp_returns.dropna()
 
 
-temp_ts
-temp_returns = temp_returns.dropna()
-
-(temp_returns+1).prod()
-
-((temp_returns+1).cumprod() - 1).plot()
-
-s_weights
-
-port = temp_returns.dot(s_weights)
-
-((port + 1).cumprod()).plot()
-
-s_weights.transpose()
-temp_returns.head()
-
-(temp_returns + 1).cumprod()
-
-(temp_returns.multiply(s_weights)+1).cumprod() - 1
-
-d=temp_ts.index[0]
-d1=temp_ts.index[1]
-
-(temp_ts.loc[d1] - temp_ts.loc[d])/temp_ts.loc[d]
-
-
-
-new_returns = cum_returns_options(temp_ts)
-
-temp_ts.loc["2015-08-21"].dot(s_weights)
-
-temp_ts.loc["2015-06-23"].dot(s_weights)
-
-
-(new_returns.dot(s_weights) + 1).cumprod()
-
-option_prices['2020-07-17'].plot()
-
-temp_returns.drop(temp_returns.index[0])
 #
 # exps = list(option_prices.keys())
 # exps.sort()
@@ -494,33 +370,3 @@ temp_returns.drop(temp_returns.index[0])
 #     option_prices[exp].to_excel(writer,sheet_name=exp)
 #
 # writer.save()
-
-
-def cum_returns_options(df):
-    cum_returns = df.copy()
-    cum_returns = cum_returns.drop(cum_returns.index[0])
-    daily_returns = cum_returns.copy()
-    start = df.index[0]
-    for row in cum_returns.index:
-        temp_r = (df.loc[row]-df.loc[start])/df.loc[start]
-        cum_returns.loc[row] = temp_r
-        if row == cum_returns.index[0]:
-            daily_returns.loc[row] = temp_r
-        else:
-            daily_returns.loc[row] = cum_returns.loc[row] - cum_returns.loc[prev_row]
-
-        prev_row = row
-
-    return daily_returns
-
-(cum_returns_options(temp_ts)+1).cumprod()
-
-check_ts = cum_returns_options(temp_ts)
-check_ts.sum()
-
-
-df = pd.read_excel("C:/Users/gregg/OneDrive/Senior Year/MGT-411/Code/Data/sector_weights.xlsx", usecols=tickers[1:])
-
-data1["XLF"]["Calls"]
-
-import os
