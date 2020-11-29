@@ -30,7 +30,7 @@ Have Option_Data.xlsx file open and press alt+f11 to open up Macro
 
 - Change "general" tab to "Workbook"
 
-- Add this code:
+- Add this code: (delete automatic generated code and replace with code below)
 
 Sub ConvertFormulasToValues()
 Dim ws As Worksheet

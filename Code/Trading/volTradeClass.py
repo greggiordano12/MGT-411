@@ -139,7 +139,7 @@ class volTrade:
         '''
         xls = pd.ExcelFile(self.option_data_directory)
         data_dic = {tick:{"Calls":{"Strikes":{},"Prices":{} }, "Puts":{"Strikes":{},"Prices":{} } } for tick in self.tickers}
-        for tick in tickers:
+        for tick in self.tickers:
             print(tick)
             tick_prices = self.price_matrix[tick] # get price series for given ticker
             tick_calls = pd.read_excel(xls,tick + " Calls")
@@ -292,10 +292,14 @@ class volTrade:
         data_prices = {}
         data_ivs = {}
         for exp in expiries:
+            if exp == "1/17/15":
+                continue
             temp_option_matrix,temp_iv_matrix = pd.DataFrame({}), pd.DataFrame({})
             for tick in self.tickers:
                 tick_calls, tick_puts = data[tick]["Calls"]["Prices"][exp].iloc[:,0].drop_duplicates(keep="last"),data[tick]["Puts"]["Prices"][exp].iloc[:,0].drop_duplicates(keep='last')
                 tick_call_ivs, tick_put_ivs = data[tick]["Calls"]["Prices"][exp].iloc[:,1].drop_duplicates(keep='last'),data[tick]["Puts"]["Prices"][exp].iloc[:,1].drop_duplicates(keep='last')
+                tick_calls, tick_puts =tick_calls[~tick_calls.index.duplicated(keep='first')], tick_puts[~tick_puts.index.duplicated(keep="first")]
+                tick_call_ivs,tick_put_ivs = tick_call_ivs[~tick_call_ivs.index.duplicated(keep='first')], tick_put_ivs[~tick_put_ivs.index.duplicated(keep="first")]
                 curr_options,curr_ivs = pd.concat([tick_calls,tick_puts],axis =1), pd.concat([tick_call_ivs,tick_put_ivs],axis =1)
                 temp_option_matrix, temp_iv_matrix = pd.concat([temp_option_matrix,curr_options],axis=1), pd.concat([temp_iv_matrix,curr_ivs],axis=1)
 
@@ -340,23 +344,54 @@ class volTrade:
 
 
 
+    def dispersionPortfolio(self, option_prices=None, option_ivs=None):
+        # slight adjustments to data1 makes this method possible. Data should be continuous now
+        if data == None:
+            option_prices, option_ivs = self.all_expTS()
+
+        init_port_value = 10000000 # initial portfolio value is 10,000,000
+        exps = list(option_prices.keys())
+        exps.sort()
+        for exp in exps:
+            curr_time_series = option_prices[exp]
+            s_weights = self.sector_weights_df.loc[curr_time_series.index[0]]
+            temp_weights = [-.5,-.5]
+
+
+
 
 
 
 tickers = ["SPY","XLK","XLF","XLY","XLV","XLI"]
 start_date = "2015-01-01"
 try_vols = volTrade(tickers,start_date)
+
 data1 = try_vols.optionSeries()
+
+data1
 
 option_prices, option_ivs=try_vols.all_expTS(data=data1)
 
+option_prices.keys()
+
+option_prices
+
 all_portfolios = try_vols.dispersionTest(option_prices)
 all_returns = list(all_portfolios["Returns"].values())
+
+
+
+
+
+
 np.mean(all_returns)
 np.std(all_returns)
+all_returns
 
+all_portfolios["Series"]['2020-10-16'].mean()*31
 
-
+all_returns
+len(all_portfolios["Series"]["2020-10-16"])
 
 
 
